@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "Code for Local Text-to-Image Model Evaluation under Consumer-GPU and Chinese-Prompt Constraints"
+message: "If you use this code, please cite the archived Zenodo release."
+type: software
+authors:
+  - family-names: "Chen"
+    given-names: "Lianglong"
+version: "1.0.0"
+date-released: "2026-05-23"
+license: "MIT"

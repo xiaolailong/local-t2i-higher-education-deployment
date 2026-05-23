@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+.Rhistory
+.RData
+.Rproj.user/
+.DS_Store
+Thumbs.db
+
+# local configuration
+code/config.py
+
+# local outputs and large data
+data/*.zip
+data/*.xlsx
+data/calibration_analysis/
+data/extended_analysis/
+data/zimage_complement_analysis/
+outputs/
+figures_temp/
+*.log
+
+# model weights should never be committed
+*.safetensors
+*.ckpt
+*.gguf
+*.pt
+*.pth

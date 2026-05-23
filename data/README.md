@@ -1,0 +1,1 @@
+The full analysis data, prompt workbook, objective score workbooks, image-level subjective scores, and generated image archives are available from the Zenodo dataset record associated with this project.
