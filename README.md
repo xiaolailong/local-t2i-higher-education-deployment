@@ -2,17 +2,27 @@
 
 This repository contains the scripts used for a deployment-oriented evaluation of local text-to-image (T2I) models under consumer-grade GPU and Chinese-prompt constraints. The scripts cover image generation, objective scoring, subjective-rating transformation, image-level aggregation, statistical analysis, figure production, and complementary Z-Image-Turbo analyses.
 
-## Directory layout
+## Citation and archive
 
-- `conf/`: ComfyUI workflow templates for Qwen-Image-2512, Z-Image-Turbo, and SDXL-Turbo.
-- `R/`: R scripts for statistical analyses and publication figures.
-- `*.py`: Python scripts for generation, scoring, data transformation, and complementary analyses.
+**Code archive:**
+
+**Data archive:**
 
 ## Main dependencies
 
-Python scripts require Python 3.10+ and commonly use `pandas`, `numpy`, `openpyxl`, `Pillow`, `requests`, `psutil`, `matplotlib`, `open_clip_torch`, and `pyiqa`. Image-generation scripts require a running ComfyUI environment and locally available model weights configured in `config.py` and workflow JSON files.
+Python scripts require Python 3.10+ and commonly use `pandas`, `numpy`, `openpyxl`, `Pillow`, `requests`, `psutil`, `matplotlib`, `open_clip_torch`, and `pyiqa`. The Python dependencies can be installed with:
+
+```bash
+pip install -r requirements.txt
+```
+
+Image-generation scripts require a running ComfyUI environment and locally available model weights configured in `config.py` and workflow JSON files.
 
 R scripts require packages such as `tidyverse`, `readxl`, `writexl`, `openxlsx`, `ggplot2`, `lme4`, `lmerTest`, `emmeans`, `effectsize`, and `car`, depending on the specific script.
+
+## Data availability
+
+This repository contains the analysis code, R scripts, and ComfyUI workflow templates. The prompt workbook, objective-score workbooks, image-level subjective-score summaries, analysis outputs, and generated image archives are not stored in this GitHub repository because of file size. They are available from the Zenodo data archive listed above.
 
 ## Data assumptions
 
@@ -61,16 +71,16 @@ All revised generated Excel columns and sheet names use English labels. Multi-wo
    Output: AM1 tables and statistical results.
 
 8. `R/benchmark_am2_plot_scores.R`, `R/benchmark_am2_profile_plot.R`, and related figure scripts  
-    Analyze task-attribute patterns and generate figures.  
-    Input: image-level subjective-analysis workbook.  
-    Output: task-attribute tables and figures.
+   Analyze task-attribute patterns and generate figures.  
+   Input: image-level subjective-analysis workbook.  
+   Output: task-attribute tables and figures.
 
 9. `R/benchmark_am3_bilingual_transfer.R` and `R/benchmark_am3_plot_composite_cn_en.R`  
-    Analyze bilingual transfer and cross-language score shifts.  
-    Input: image-level subjective-analysis workbook.  
-    Output: bilingual analysis tables and figures.
+   Analyze bilingual transfer and cross-language score shifts.  
+   Input: image-level subjective-analysis workbook.  
+   Output: bilingual analysis tables and figures.
 
-10. `R/benchmark_am4_deployment_analysis.R` and `R/benchmark_am4_deployment_analysis.R` related plots  
+10. `R/benchmark_am4_deployment_analysis.R` and related plots  
     Analyze quality, inference time, and VRAM tradeoffs.  
     Input: image-level subjective-analysis workbook with resource metadata.  
     Output: deployment-scenario tables and resource-effect figures.
@@ -125,3 +135,8 @@ All revised generated Excel columns and sheet names use English labels. Multi-wo
 - Keep random seeds, model file names, ComfyUI workflow files, software versions, and hardware information unchanged when reproducing the reported results.
 - The generation scripts assume that ComfyUI is accessible through the configured local API endpoint.
 - Objective scores should be regenerated if image files, scoring models, or normalization rules are changed.
+- Model weight files are not included in this repository. Please obtain them from the corresponding official model repositories or model cards and configure the local paths before running the generation scripts.
+
+## License
+
+The code is released under the MIT License. Data and prompt materials in the separate Zenodo data archive are released under the license specified in that archive. Generated images are shared for research reproducibility and remain subject to the licenses of the corresponding source models.

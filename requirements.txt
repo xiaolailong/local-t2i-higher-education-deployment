@@ -1,0 +1,12 @@
+pandas
+numpy
+openpyxl
+Pillow
+requests
+psutil
+matplotlib
+open_clip_torch
+pyiqa
+torch
+torchvision
+tqdm
