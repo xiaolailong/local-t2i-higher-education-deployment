@@ -1,12 +1,10 @@
 #!/usr/bin/env Rscript
 # Figure 5: task-conditioned quality screens and generation-time tradeoffs.
 # Inputs: data/source/ and the tested configuration's measured resource means.
-# The screening thresholds illustrate choices; they are not validated standards.
 # Outputs: data/paper_results/ and outputs/paper_figures/.
 
 options(stringsAsFactors = FALSE)
 
-# ---------------------------- 0. User settings -------------------------------
 REPO_ROOT <- getwd()  # invoke from the repository root
 SUBJECTIVE_XLSX <- file.path(REPO_ROOT, "data", "source", "subjective_scores_human120_image_level.xlsx")
 PROMPTS_XLSX <- file.path(REPO_ROOT, "data", "source", "prompts.xlsx")
@@ -19,7 +17,6 @@ FIGURE_WIDTH_MM <- 178
 FIGURE_HEIGHT_MM <- 158
 PNG_DPI <- 600
 
-# Resource means for the tested model configurations.
 resource <- data.frame(
   Model = c("Qwen", "Z-Image", "SDXL"),
   Configuration = c("Qwen-Image-2512", "Z-Image-Turbo", "SDXL-Turbo"),
@@ -28,7 +25,6 @@ resource <- data.frame(
   Provenance = rep("research_master_20261109.md, section 4.3: verified AM4 mean of tested configuration; not recomputed here", 3)
 )
 
-# ---------------------------- 1. Required packages ---------------------------
 for (pkg in c("readxl", "ggplot2")) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     stop("Missing R package '", pkg, "'. Install once with install.packages('", pkg, "').", call. = FALSE)
@@ -62,7 +58,6 @@ all_prompt_ids <- paste0("B", 1:20)
 get_prompt_col <- function(d) {
   candidate <- find_named_col(d, c("PromptID", "Prompt_ID", "PromptId", "PromptCode", "PromptNo", "PromptNumber"))
   if (!is.null(candidate)) return(candidate)
-  # A safe fallback for a differently named ID column (never a text-prompt column).
   hit <- vapply(d, function(v) sum(normalize_id(v) %in% all_prompt_ids, na.rm = TRUE), integer(1))
   good <- which(hit >= 15)
   if (length(good) == 1) return(names(d)[good])
@@ -78,7 +73,6 @@ model_name <- function(x) {
   out
 }
 
-# ---------------------------- 2. Original scored images ----------------------
 if (!file.exists(SUBJECTIVE_XLSX)) {
   abort("Latest Chinese image-level workbook not found: ", SUBJECTIVE_XLSX,
         "\nEdit SUBJECTIVE_XLSX at the top only if the data directory was moved.")
@@ -99,10 +93,6 @@ if (any(vapply(needed, is.null, logical(1)))) {
         "\nActual Excel column names: ", paste(names(raw), collapse = ", "))
 }
 
-# In the latest 120-image workbook, B1-B20 may occur in BOTH the Chinese
-# and English rated-image records. Select language BEFORE enforcing 60 rows.
-# Never select the first/last 60 rows, deduplicate by model/prompt, or use
-# historical score snapshots to decide which language to retain.
 language_code <- function(x) {
   z <- tolower(trimws(as.character(x)))
   z <- gsub("[[:space:]_]+", "", z)
@@ -131,9 +121,6 @@ select_chinese_image_rows <- function(d, prompt_col) {
           paste(names(d), collapse = ", "))
   }
 
-  # First inspect dedicated language/locale fields. If the source uses a
-  # differently named categorical column, accept that only when its actual
-  # values explicitly distinguish Chinese from English for all 120 B rows.
   cn <- normal_col(names(d))
   preferred <- which(grepl("language|^lang|lang$|locale", cn))
   candidates <- c(preferred, setdiff(seq_along(d), preferred))
@@ -193,7 +180,6 @@ for (col in c("CompositeScore", "MeanAdherence")) {
     abort("Invalid 1–5 values in ", col, ".")
   }
 }
-# Explicit stale-version checks; these are anchors, never plotted as replacements.
 expected_scores <- c(Qwen = 4.1344, `Z-Image` = 4.0030, SDXL = 2.9123)
 expected_below <- c(Qwen = 0L, `Z-Image` = 1L, SDXL = 18L)
 for (m in names(expected_scores)) {
@@ -207,10 +193,6 @@ for (m in names(expected_scores)) {
   }
 }
 
-# ---------------------------- 3. Auditable prompt taxonomy -------------------
-# Do not invent B1-B20 membership! The MD gives group sizes but not the B IDs.
-# Prefer authentic metadata from the original prompts.xlsx, otherwise reuse only
-# the finalized Figure 3 prompt-label CSV (never its scores).
 clean_tag <- function(x) {
   z <- tolower(trimws(as.character(x)))
   z <- gsub("[[:space:]_./–—-]+", "", z)
@@ -291,15 +273,10 @@ metadata_from_fig3_csv <- function(path) {
   d$.__Prompt <- normalize_id(d[[id]])
   d <- d[d$.__Prompt %in% all_prompt_ids, , drop = FALSE]
   if (nrow(d) < 20) return(NULL)
-  # Figure 3's long-form output may have a TaskGroup column rather than
-  # independent Context/Content columns. Scan labels by value, not by guessed
-  # column names; never use the Fig3 numerical score columns.
   candidate_cols <- setdiff(names(d)[grepl(
     "context|content|group|task|category|class|type", normal_col(names(d)))],
     c(id, ".__Prompt"))
   if (!length(candidate_cols)) {
-    # In case the finalized Fig3 CSV uses an unnamed category column, only
-    # consider low-cardinality text fields, not free-form prompt text/labels.
     possibilities <- setdiff(names(d), c(id, ".__Prompt"))
     candidate_cols <- possibilities[vapply(d[possibilities], function(x) {
       is.character(x) && length(unique(stats::na.omit(x))) <= 8L
@@ -316,8 +293,6 @@ metadata_from_fig3_csv <- function(path) {
     if (length(ctx) == 1) source_context[i] <- ctx
     if (length(ctt) == 1) source_content[i] <- ctt
   }
-  # Only if all 20 Context and binary Content tags have been recovered is this
-  # fallback acceptable; otherwise explicitly fail instead of guessing.
   tmp <- data.frame(PromptID = all_prompt_ids, Context = source_context,
                     Content = source_content)
   checked <- tryCatch(validate_metadata(tmp), error = function(e) {
@@ -343,7 +318,6 @@ if (is.null(meta)) {
 message("  Taxonomy source: ", attr(meta, "mapping_source"))
 meta$MappingSource <- attr(meta, "mapping_source")
 
-# Additional label-consistency check against verified latest Chinese subgroup gaps.
 wide <- reshape(image_scores[c("PromptID", "Model", "CompositeScore")],
                 idvar = "PromptID", timevar = "Model", direction = "wide")
 wide$GapQwenMinusZ <- wide$CompositeScore.Qwen - wide$`CompositeScore.Z-Image`
@@ -365,8 +339,6 @@ if (any(abs(gap_checks - expected_gaps) > 0.025)) {
         ". Check input files and category mapping, not the R code's thresholds.")
 }
 
-# ---------------------------- 4. Task-level measured inputs ------------------
-# All20 is a descriptive baseline. Context and Content reuse the same B1-B20.
 group_defs <- data.frame(
   Group = c("All20", "Educational", "General", "Chinese-cultural", "Object-Concept", "Other content"),
   Display = c("ALL PROMPTS", "EDUCATIONAL", "GENERAL", "CHINESE-CULTURAL", "OBJECT–CONCEPT", "OTHER CONTENT"),
@@ -401,7 +373,6 @@ metrics <- do.call(rbind, lapply(seq_len(nrow(group_defs)), function(g) {
   }))
 }))
 
-# ---------------------------- 5. Transparent rule sweep ----------------------
 choose_fastest <- function(group, score_floor, required_coverage) {
   sub <- metrics[metrics$Group == group &
                    metrics$MeanCompositeScore >= score_floor - 1e-10 &
@@ -410,7 +381,6 @@ choose_fastest <- function(group, score_floor, required_coverage) {
   sub$Model[order(sub$MeanLatencySeconds, sub$Model)][1]
 }
 
-# Continuous, piecewise-constant switch intervals, not an arbitrary heatmap grid.
 intervals <- do.call(rbind, lapply(seq_len(nrow(group_defs)), function(i) {
   g <- group_defs$Group[i]
   do.call(rbind, lapply(COMPOSITE_MEAN_FLOORS, function(qfloor) {
@@ -423,7 +393,6 @@ intervals <- do.call(rbind, lapply(seq_len(nrow(group_defs)), function(i) {
     seg$SelectedModel <- vapply(seq_len(nrow(seg)), function(j) {
       choose_fastest(g, qfloor, (seg$LeftCoverage[j] + seg$RightCoverage[j]) / 2)
     }, character(1))
-    # Merge adjacent stripes with same selected model for calmer geometry.
     if (nrow(seg) > 1) {
       run_id <- cumsum(c(TRUE, seg$SelectedModel[-1] != head(seg$SelectedModel, -1)))
       seg <- do.call(rbind, lapply(split(seg, run_id), function(x) {
@@ -442,9 +411,6 @@ intervals$ToPct <- 100 * intervals$RightCoverage
 intervals$Condition <- paste0("group mean CompositeScore >= ", intervals$QualityFloor,
                               "; image-level MeanAdherence >= ", ADHERENCE_ITEM_FLOOR)
 
-# Exact threshold decisions are separately exported because boundary points
-# are mathematically inclusive, though a colored continuous region has no way
-# to show whether one zero-width endpoint belongs to its left/right neighbor.
 policy_grid <- do.call(rbind, lapply(group_defs$Group, function(g) {
   do.call(rbind, lapply(COMPOSITE_MEAN_FLOORS, function(floor) {
     data.frame(Group = g, CompositeFloor = floor,
@@ -459,7 +425,6 @@ policy_grid$SelectedMeanLatencySeconds <- resource$MeanLatencySeconds[
 policy_grid$SelectedMeanVRAM_MB <- resource$MeanVRAM_MB[
   match(policy_grid$SelectedFastest, resource$Model)]
 
-# ---------------------------- 6. Figure styling ------------------------------
 palette <- c("Qwen" = "#526E90", "Z-Image" = "#4C968C",
              "SDXL" = "#BD9C70", "None" = "#E5E9EB")
 ink <- "#263A4A"
@@ -479,9 +444,6 @@ interval_plot$LabelX <- (interval_plot$FromPct + interval_plot$ToPct) / 2
 interval_plot$ShortLabel <- c("Qwen"="Q", "Z-Image"="Z", "SDXL"="S", "None"="–")[interval_plot$SelectedModel]
 interval_plot$IsLong <- (interval_plot$ToPct - interval_plot$FromPct) >= 12
 
-# Identify actual decision switches, rather than marking an arbitrary 80% line.
-# A switch at c% occurs just ABOVE c%: the faster model on the left still
-# qualifies at exactly c% because the inclusion condition uses >=.
 switch_candidates <- lapply(
   split(interval_plot, interaction(interval_plot$Group, interval_plot$QualityFloor,
                                    drop = TRUE)),
@@ -508,8 +470,6 @@ if (length(switch_candidates)) {
                          YMin = numeric(), YMax = numeric())
 }
 
-# The same boundary may occur at both mean-score floors (as it does for All20).
-# Draw short ticks on BOTH rails but label the threshold only once per group.
 if (nrow(switches)) {
   switch_callouts <- unique(switches[c("Group", "SwitchAtPct")])
   switch_callouts$Y <- vapply(seq_len(nrow(switch_callouts)), function(i) {
@@ -542,7 +502,6 @@ p_main <- ggplot() +
   geom_rect(data = rails,
             aes(xmin = 0, xmax = 100, ymin = Y - 0.19, ymax = Y + 0.19),
             fill = NA, color = "#CBD3D6", linewidth = 0.28) +
-  # Short boundary ticks mark the selection intervals.
   geom_segment(data = switches,
                aes(x = SwitchAtPct, xend = SwitchAtPct,
                    y = YMin - 0.025, yend = YMax + 0.075),
@@ -601,8 +560,6 @@ p_main <- ggplot() +
     plot.margin = margin(t = 4, r = 8, b = 1, l = 12)
   )
 
-# A *separate* compact cost ruler avoids pretending the tested times were
-# task-specific, and avoids misusing mean VRAM as a feasibility constraint.
 cost <- resource
 cost$Y <- c(3.15, 2.25, 1.35)
 cost$LogX <- 18 + log10(cost$MeanLatencySeconds) / log10(200) * 91
@@ -644,21 +601,17 @@ p_cost <- ggplot() +
   theme_void(base_size = 9.5, base_family = "sans") +
   theme(plot.margin = margin(t = 0, r = 8, b = 4, l = 8))
 
-# ---------------------------- 7. Save reproducible data ----------------------
 write.csv(image_scores[order(image_scores$PromptID, image_scores$Model), ],
           file.path(path_result, "Fig5_latest_chinese_prompt_model_scores.csv"), row.names = FALSE, na = "")
 write.csv(meta, file.path(path_result, "Fig5_task_taxonomy.csv"), row.names = FALSE, na = "")
 write.csv(metrics, file.path(path_result, "Fig5_task_model_inputs.csv"), row.names = FALSE, na = "")
 write.csv(intervals, file.path(path_result, "Fig5_decision_intervals.csv"), row.names = FALSE, na = "")
-# SwitchPct is the limiting coverage of the faster model: the change to
-# ToModel occurs only when required coverage is STRICTLY GREATER than it.
 write.csv(switches[c("Group", "QualityFloor", "FromModel", "ToModel", "SwitchAtPct")],
           file.path(path_result, "Fig5_choice_switch_boundaries.csv"),
           row.names = FALSE, na = "")
 write.csv(policy_grid, file.path(path_result, "Fig5_exact_policy_scenarios.csv"), row.names = FALSE, na = "")
 write.csv(resource, file.path(path_result, "Fig5_verified_configuration_costs.csv"), row.names = FALSE, na = "")
 
-# ---------------------------- 8. Output figure -------------------------------
 draw_figure <- function() {
   grid::grid.newpage()
   v <- grid::viewport(layout = grid::grid.layout(

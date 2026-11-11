@@ -1,22 +1,15 @@
 #!/usr/bin/env Rscript
 # Figure 4: contrastive examples selected from the rated images.
 # Inputs: project data/source/ workbooks and original subjective Chinese benchmark images.
-# Exact rated-image identity must be established before rendering.
 # Outputs: data/paper_results/ and outputs/paper_figures/.
 
 options(stringsAsFactors = FALSE)
 
-# -------------------------- 0. Paths and options ----------------------------
 REPO_ROOT <- normalizePath(getwd(), winslash = '/', mustWork = TRUE)
 SUBJECTIVE_XLSX <- file.path(REPO_ROOT, 'data', 'source', 'subjective_scores_human120_image_level.xlsx')
 PROMPTS_XLSX <- file.path(REPO_ROOT, 'data', 'source', 'prompts.xlsx')
 FIG3_METADATA_CSV <- file.path(REPO_ROOT, 'data', 'paper_results', 'Fig3_task_model_prompt_scores.csv')
-# Optional audit-approved source manifest (not generated/filled by this script):
-# columns PromptID, Model, ImagePath. Only use if the mapping has been VERIFIED
-# against the original questionnaire images, not inferred from model names.
 VERIFIED_IMAGE_MANIFEST <- file.path(REPO_ROOT, 'data', 'paper_results', 'Fig4_verified_image_manifest.csv')
-# Default policy is deliberately strict. Set TRUE only AFTER independently
-# confirming that every unique filename match is the actual rated source image.
 ALLOW_UNVERIFIED_FILENAME_MATCH <- FALSE
 FIG_WIDTH_MM <- 178
 FIG_HEIGHT_MM <- 165
@@ -104,7 +97,6 @@ select_chinese_rows <- function(d, pc) {
   vals[[1]]
 }
 
-# ------------------------- 1. Scoring and selection -------------------------
 if (!file.exists(SUBJECTIVE_XLSX)) fail('Scored workbook missing: ', SUBJECTIVE_XLSX)
 if (!'image_level' %in% readxl::excel_sheets(SUBJECTIVE_XLSX)) {
   fail('Required image_level sheet missing in: ', SUBJECTIVE_XLSX)
@@ -171,11 +163,6 @@ for (i in seq_len(nrow(selected))) {
                   selected$PromptID[i], selected$GapQwenMinusZ[i]))
 }
 
-
-# -------------------------- 1b. Short task labels ---------------------------
-# Recover concise task labels for the three selected prompts. These labels are
-# optional display aids only; if authentic metadata cannot be validated, the
-# figure still renders without them.
 clean_tag <- function(x) {
   z <- tolower(trimws(as.character(x)))
   z <- gsub('[[:space:]_./–—-]+', '', z)
@@ -265,8 +252,6 @@ if (!is.null(meta)) {
   selected$TaskLabel <- unname(tag_map[selected$PromptID])
 }
 
-# -------------------------- 2. Source file discovery ------------------------
-# Search only the Chinese-prompt images used in subjective ratings.
 BENCHMARK_IMAGE_ROOT <- 'D:/xujc/科研/文生图模型/data/benchmark/subjective/chinese'
 if (!dir.exists(BENCHMARK_IMAGE_ROOT)) {
   fail('Rated-image directory missing: ', BENCHMARK_IMAGE_ROOT,
@@ -302,8 +287,6 @@ within_benchmark <- function(path) {
   startsWith(x, paste0(root, '/'))
 }
 
-# Each candidate retains the evidence field and matching method so that a
-# genuinely different pair of images never collapses into an arbitrary pick.
 empty_candidates <- function() {
   data.frame(ImagePath=character(), EvidenceField=character(),
              EvidenceValue=character(), MatchMethod=character(),
@@ -327,12 +310,9 @@ workbook_candidates <- function(value, field) {
   if (!nzchar(x)) return(out)
   has_ext <- grepl(image_extensions, x, ignore.case=TRUE)
   if (has_ext) {
-    # 1: Specific, existing paths that point into benchmark. Do not reinterpret
-    # an absolute source path from another project as a verified scored image.
     direct <- if (file.exists(x)) x else character()
     out <- add_candidates(out, direct, field, x, 'explicit_absolute_path', 5L)
 
-    # 2: Preserve workbook relative subdirectories before trying filename only.
     is_absolute <- grepl('^[[:alpha:]]:/|^/', x)
     if (!is_absolute) {
       rel_candidates <- c(file.path(BENCHMARK_IMAGE_ROOT, x),
@@ -341,8 +321,6 @@ workbook_candidates <- function(value, field) {
       out <- add_candidates(out, rel_candidates, field, x,
                             'exact_relative_path', 4L)
     }
-    # 3: Workbooks may record paths from a machine with a different root.
-    # Require an identical relative path FROM the benchmark directory.
     xlow <- tolower(x)
     rel <- ''
     if (grepl('/benchmark/', xlow, fixed=TRUE)) {
@@ -358,8 +336,6 @@ workbook_candidates <- function(value, field) {
       relative_hits <- all_files[endsWith(tolower(all_files), paste0('/', tolower(rel)))]
       out <- add_candidates(out, relative_hits, field, x, 'benchmark_relative_suffix', 3L)
     }
-    # 4: Filename-only is weaker: acceptable if it points to one file or to
-    # multiple byte-identical copies, never when different images share a name.
     basename_hits <- all_files[tolower(basename(all_files)) == tolower(basename(x))]
     out <- add_candidates(out, basename_hits, field, x, 'exact_basename', 2L)
   } else if (grepl('^[A-Za-z0-9._-]{2,160}$', x)) {
@@ -369,8 +345,6 @@ workbook_candidates <- function(value, field) {
   out
 }
 
-# Filename tokens are strictly a discovery aid if the scored workbook has no
-# usable image-reference field. They are NOT, on their own, proof of provenance.
 match_token <- function(p, id) {
   k <- sub('^B','',id)
   grepl(paste0('(^|[^[:alnum:]])b0*', k, '([^[:digit:]]|$)'),
@@ -389,7 +363,6 @@ file_candidate_matches <- function(id, model) {
   hits[vapply(hits, function(x) identical(path_model(x), model), logical(1))]
 }
 
-# If the manifest exists, each selected record must identify one real file.
 manifest <- NULL
 if (file.exists(VERIFIED_IMAGE_MANIFEST)) {
   manifest <- tryCatch(read.csv(VERIFIED_IMAGE_MANIFEST, check.names=FALSE,
@@ -428,7 +401,6 @@ for (case_i in seq_len(nrow(selected))) {
       candidates <- add_candidates(candidates, matches, '', '',
                                    'prompt_model_filename_only', 1L)
     }
-    # The verified manifest is an explicit endorsement of one original image.
     manifest_used <- FALSE
     if (!is.null(manifest)) {
       mm <- manifest[manifest$PromptID == id & manifest$Model == m, ]
@@ -446,8 +418,6 @@ for (case_i in seq_len(nrow(selected))) {
     if (nrow(candidates)) {
       candidates <- candidates[order(-candidates$Priority, candidates$ImagePath,
                                      candidates$EvidenceField), , drop=FALSE]
-      # Keep one strongest provenance record per actual file; retain all unique
-      # underlying paths in the exported audit.
       candidates <- candidates[!duplicated(candidates$ImagePath), , drop=FALSE]
       candidates$MD5 <- unname(as.character(tools::md5sum(candidates$ImagePath)))
       candidates$Bytes <- as.numeric(file.info(candidates$ImagePath)$size)
@@ -467,8 +437,6 @@ for (case_i in seq_len(nrow(selected))) {
     if (nrow(best)) {
       distinct_content <- length(unique(best$MD5))
       if (distinct_content == 1L && (manifest_used || has_workbook_hit || ALLOW_UNVERIFIED_FILENAME_MATCH)) {
-        # Different paths with identical MD5 are exactly the same image pixels
-        # at file level; selection is deterministic and documented.
         chosen <- best$ImagePath[1]
         status <- 'RESOLVED'
         method <- if (manifest_used) 'verified_manifest' else if (nrow(best) > 1L) {
@@ -520,7 +488,6 @@ source_rows$Bytes <- as.numeric(file.info(source_rows$ResolvedImagePath)$size)
 write.csv(source_rows, file.path(result_dir,'Fig4_verified_image_sources.csv'),
           row.names=FALSE, na='')
 
-# ----------------------------- 3. Read originals ----------------------------
 read_original_image <- function(path) {
   ext <- tolower(tools::file_ext(path))
   if (requireNamespace('magick', quietly=TRUE)) {
@@ -542,10 +509,6 @@ read_original_image <- function(path) {
 }
 images <- lapply(source_rows$ResolvedImagePath,read_original_image)
 
-# -------------------------- 4. Compact evidence triptych --------------------
-# Three prompt cases = columns; top/bottom per case = Qwen/Z-Image scored image.
-# Image aspect ratio is preserved; never crop, mirror, recolor, annotate pixels,
-# or replace a source image with a newly generated example.
 W <- FIG_WIDTH_MM; H <- FIG_HEIGHT_MM
 palette <- c('Qwen'='#526E90','Z-Image'='#4C968C')
 ink <- '#283D4B'; muted <- '#637783'; rule <- '#D6DFE3'

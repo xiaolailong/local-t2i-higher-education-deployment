@@ -70,7 +70,6 @@ find_chinese <- function(d, idcol) {
   found[[1]]
 }
 
-# ----------------------- 1. Independent image counts -------------------------
 if (!file.exists(SCORES_XLSX)) fail('Latest Chinese rating workbook missing: ',SCORES_XLSX)
 raw <- as.data.frame(readxl::read_excel(SCORES_XLSX,sheet='image_level'))
 idcol <- get_id_col(raw)
@@ -95,9 +94,6 @@ for (m in model_order) {
     fail('Latest Chinese rating version check failed for ',m)
 }
 
-# ----------------------- 2. Tested formal settings ---------------------------
-# These values are explicitly recorded in the original main.tex and original
-# method/appendix text (NOT the default values of workflow JSON templates).
 tested <- data.frame(
   Configuration = c('Qwen-Image-2512', 'Z-Image-Turbo', 'SDXL-Turbo'),
   Loading = c('GGUF diffusion model, GGUF text encoder, and VAE',
@@ -110,14 +106,6 @@ tested <- data.frame(
 )
 stopifnot(nrow(tested)==3L, !anyNA(tested), setequal(model_order,c('Qwen','Z-Image','SDXL')))
 
-# Experimental environment and planned evaluation protocol are factual
-# design records from the original manuscript. Observed questionnaire counts
-# and rater-group composition belong to the later rater/reliability results,
-# not to this pre-specified design table.
-
-# ----------------------- 3. Publish-ready Markdown ---------------------------
-# Only necessary methodological facts. No internal module labels, provenance
-# audit, source paths, placeholder cells, or defensive explanations in table.
 markdown <- c(
   '# Table 1. Tested generation configurations and Chinese evaluation design',
   '',

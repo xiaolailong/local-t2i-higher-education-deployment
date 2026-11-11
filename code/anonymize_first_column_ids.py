@@ -11,7 +11,6 @@ import csv
 from pathlib import Path
 from openpyxl import load_workbook
 
-
 def normalize_id(value):
     """
     将单元格中的 ID 统一转换成字符串，用于建立映射。
@@ -26,7 +25,6 @@ def normalize_id(value):
 
     return text
 
-
 def anonymize_excel(input_path, output_path, header_row=1, prefix="R", width=4, mapping_out=None):
     input_path = Path(input_path)
     output_path = Path(output_path)
@@ -34,13 +32,11 @@ def anonymize_excel(input_path, output_path, header_row=1, prefix="R", width=4, 
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    # keep_vba=True 可尽量保留 xlsm 宏文件结构；普通 xlsx 也可用
     wb = load_workbook(input_path, keep_vba=input_path.suffix.lower() == ".xlsm")
 
     id_mapping = {}
     next_index = 1
 
-    # 第一步：扫描所有 sheet 的第一列，建立全局映射
     for ws in wb.worksheets:
         start_row = header_row + 1 if header_row and header_row > 0 else 1
 
@@ -56,7 +52,6 @@ def anonymize_excel(input_path, output_path, header_row=1, prefix="R", width=4, 
                 id_mapping[original_id] = anonymized_id
                 next_index += 1
 
-    # 第二步：替换所有 sheet 第一列中的 ID
     for ws in wb.worksheets:
         start_row = header_row + 1 if header_row and header_row > 0 else 1
 
@@ -69,10 +64,8 @@ def anonymize_excel(input_path, output_path, header_row=1, prefix="R", width=4, 
 
             cell.value = id_mapping[original_id]
 
-    # 保存匿名化后的 Excel
     wb.save(output_path)
 
-    # 可选：导出映射表。注意：这个文件不要提交给期刊或公开。
     if mapping_out:
         mapping_out = Path(mapping_out)
         with mapping_out.open("w", newline="", encoding="utf-8-sig") as f:
@@ -89,7 +82,6 @@ def anonymize_excel(input_path, output_path, header_row=1, prefix="R", width=4, 
     if mapping_out:
         print(f"Mapping file saved to: {mapping_out}")
         print("Do NOT upload or publicly share the mapping file.")
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -135,7 +127,6 @@ def main():
         width=args.width,
         mapping_out=args.mapping_out
     )
-
 
 if __name__ == "__main__":
     main()

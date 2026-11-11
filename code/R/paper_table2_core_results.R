@@ -101,7 +101,6 @@ select_chinese_rows <- function(d, prompt_col) {
   vals[[1]]
 }
 
-# --- 1. Read exact 60-image latest Chinese dataset ---
 if (!file.exists(SUBJECTIVE_XLSX)) fail('Workbook not found: ', SUBJECTIVE_XLSX)
 if (!(SHEET %in% readxl::excel_sheets(SUBJECTIVE_XLSX))) {
   fail('Missing image_level worksheet in: ', SUBJECTIVE_XLSX)
@@ -140,8 +139,6 @@ model_order <- c('Qwen','Z-Image','SDXL')
 for (m in model_order) {
   if (sum(scored$Model==m) != 20L) fail('Expected exactly 20 Chinese images for ',m)
 }
-# Anchors only check that the SAME recent Chinese scores are being used;
-# all printed values below are freshly calculated, never copied from anchors.
 expected_means <- c(Qwen=4.1344, `Z-Image`=4.0030, SDXL=2.9123)
 expected_below <- c(Qwen=0L, `Z-Image`=1L, SDXL=18L)
 for (m in model_order) {
@@ -158,7 +155,6 @@ for (m in model_order) {
 scored <- scored[order(match(scored$PromptID,all_prompt_ids),
                        match(scored$Model,model_order)), ]
 
-# --- 2. Measured cost is frozen from research master section 4.3 ---
 resource <- data.frame(
   Model=model_order,
   Configuration=c('Qwen-Image-2512','Z-Image-Turbo','SDXL-Turbo'),
@@ -168,7 +164,6 @@ resource <- data.frame(
   stringsAsFactors=FALSE
 )
 
-# --- 3. Panel A: three model descriptive summaries ---
 desc <- do.call(rbind, lapply(seq_len(nrow(resource)), function(i) {
   m <- resource$Model[i]
   v <- scored[scored$Model==m, ,drop=FALSE]
@@ -188,7 +183,6 @@ desc <- do.call(rbind, lapply(seq_len(nrow(resource)), function(i) {
   )
 }))
 
-# --- 4. Panel B: paired, prompt-blocked inference ---
 score_matrix <- sapply(model_order, function(m) {
   d <- scored[scored$Model==m, c('PromptID','CompositeScore')]
   d$CompositeScore[match(all_prompt_ids,d$PromptID)]
@@ -235,9 +229,6 @@ if (abs(paired$PBH[1]-.02073) > .002) {
        sprintf('%.6f',paired$PBH[1]))
 }
 
-# --- 5. Format verified results for the single Markdown manuscript table ---
-# Keep detailed computed objects in memory; do not produce redundant CSV,
-# TeX or PDF/PNG artifacts. For any later LaTeX conversion, use the MD file.
 format_p <- function(p) ifelse(p<.001,'<0.001',sprintf('%.4f',p))
 fmt <- function(x,d=3) sprintf(paste0('%.',d,'f'),x)
 comp_col <- sprintf('%.3f (%.3f)',desc$CompositeMean,desc$CompositeSD)
@@ -251,7 +242,6 @@ p_col <- vapply(paired$PBH,format_p,character(1))
 dz_col <- sprintf('%.3f',paired$CohenDz)
 sign_col <- sprintf('%d/%d',paired$PositivePrompts,paired$NPrompts)
 
-# --- 6. Primary manuscript output: Markdown only ---
 md <- c(
   '# Table 2. Prompt-matched human ratings and measured inference cost',
   '',

@@ -158,7 +158,6 @@ summarise_group <- function(attr, level) {
              QwenAhead = sum(z$QZGap > 0),
              stringsAsFactors = FALSE)
 }
-# Build the group summaries using the original prompt annotations.
 group_specs <- list(Context = c('Educational','General','Chinese-cultural'),
                     Content = c('Object-Concept','Other content'),
                     Style = c('Realistic','Stylized'),
@@ -189,7 +188,6 @@ contrasts <- do.call(rbind, list(
   compare_groups('Complexity', 'High', 'Simple')
 ))
 
-# Leave-one-prompt-out errors compare descriptive fit with the same small prompt set.
 pairs$Context <- factor(pairs$Context, levels = group_specs$Context)
 pairs$Content <- factor(pairs$Content, levels = group_specs$Content)
 pairs$Style <- factor(pairs$Style, levels = group_specs$Style)

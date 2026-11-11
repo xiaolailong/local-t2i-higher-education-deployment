@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 from pathlib import Path
-
-# ============================================================
-# Objective evaluation model directory settings
-# Keep all objective-evaluation models and caches under models/
-# ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -22,15 +16,13 @@ else:
 
 MODELS_DIR = PROJECT_DIR / "models"
 
-# Hugging Face / Transformers cache:
-# used by ImageReward and VQAScore
+# Hugging Face / Transformers cache
 HF_CACHE_DIR = MODELS_DIR / "hf_cache"
 os.environ.setdefault("HF_HOME", str(HF_CACHE_DIR))
 os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(HF_CACHE_DIR / "hub"))
 os.environ.setdefault("TRANSFORMERS_CACHE", str(HF_CACHE_DIR / "transformers"))
 
-# PyTorch / pyiqa cache:
-# used by MUSIQScore
+# PyTorch / pyiqa cache
 TORCH_CACHE_DIR = MODELS_DIR / "torch_cache"
 os.environ.setdefault("TORCH_HOME", str(TORCH_CACHE_DIR))
 
@@ -38,10 +30,8 @@ os.environ.setdefault("TORCH_HOME", str(TORCH_CACHE_DIR))
 HPS_ROOT_DIR = MODELS_DIR / "hpsv2"
 os.environ.setdefault("HPS_ROOT", str(HPS_ROOT_DIR))
 
-# Avoid tokenizer parallelism warnings
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-# Optional: create directories automatically
 HF_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 TORCH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 HPS_ROOT_DIR.mkdir(parents=True, exist_ok=True)
@@ -66,7 +56,6 @@ except Exception as e:  # pragma: no cover
     raise ImportError("is not installed pyiqa.please run: pip install pyiqa") from e
 
 Language = Literal["chinese", "english", "zh", "en"]
-
 
 BASE_DIR = Path(__file__).resolve().parent
 MODELS_DIR = BASE_DIR.parent / "models"
@@ -96,7 +85,6 @@ _AESTHETIC_HEAD = None
 
 _MUSIQ_METRIC = None
 
-
 @dataclass
 class ObjectiveScoreResult:
     openclip: float
@@ -110,12 +98,10 @@ class ObjectiveScoreResult:
             "MUSIQ": self.musiq,
         }
 
-
 def _get_device(device: Optional[str] = None) -> torch.device:
     if device:
         return torch.device(device)
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 def _normalize_language(language: str) -> str:
     lang = language.strip().lower()
@@ -125,19 +111,15 @@ def _normalize_language(language: str) -> str:
         return "english"
     raise ValueError(f"Unsupported language: {language!r}, please use chinese/english Info zh/en.")
 
-
 def _load_image_rgb(image_path: str | Path) -> Image.Image:
     return Image.open(image_path).convert("RGB")
-
 
 def _l2_normalize(x: torch.Tensor) -> torch.Tensor:
     return x / x.norm(dim=-1, keepdim=True).clamp(min=1e-12)
 
-
 def _resolve_path_if_exists(path_or_name: str) -> str:
     p = Path(path_or_name)
     return str(p) if p.exists() else path_or_name
-
 
 def _require_exists(path_str: str, what: str) -> str:
     path = Path(path_str)
@@ -151,7 +133,6 @@ def _require_exists(path_str: str, what: str) -> str:
             f"{MODELS_DIR}/aesthetic/sa_0_4_vit_l_14_linear.pth"
         )
     return str(path)
-
 
 def _get_openclip(device: torch.device):
     global _OPENCLIP_MODEL, _OPENCLIP_PREPROCESS, _OPENCLIP_TOKENIZER
@@ -174,7 +155,6 @@ def _get_openclip(device: torch.device):
     _OPENCLIP_MODEL.to(device)
     return _OPENCLIP_MODEL, _OPENCLIP_PREPROCESS, _OPENCLIP_TOKENIZER
 
-
 def _compute_openclip(image: Image.Image, prompt: str, device: torch.device) -> float:
     model, preprocess, tokenizer = _get_openclip(device)
     image_tensor = preprocess(image).unsqueeze(0).to(device)
@@ -189,7 +169,6 @@ def _compute_openclip(image: Image.Image, prompt: str, device: torch.device) -> 
 
     return float(max(100.0 * cosine, 0.0))
 
-
 def openclip_score(
     image_path: str | Path,
     prompt: str,
@@ -202,10 +181,8 @@ def openclip_score(
     image = _load_image_rgb(image_path)
     return _compute_openclip(image=image, prompt=prompt, device=device_obj)
 
-
 def _get_aesthetic_head_path() -> Path:
     return Path(DEFAULT_AESTHETIC_HEAD_PATH)
-
 
 def _get_aesthetic_models(device: torch.device):
     global _AESTHETIC_CLIP_MODEL_OBJ, _AESTHETIC_CLIP_PROCESSOR, _AESTHETIC_HEAD
@@ -248,7 +225,6 @@ def _get_aesthetic_models(device: torch.device):
     _AESTHETIC_HEAD.to(device)
     return _AESTHETIC_CLIP_MODEL_OBJ, _AESTHETIC_CLIP_PROCESSOR, _AESTHETIC_HEAD
 
-
 def _compute_aesthetic(image: Image.Image, device: torch.device) -> float:
     with torch.no_grad():
         model, processor, head = _get_aesthetic_models(device)
@@ -266,7 +242,6 @@ def _compute_aesthetic(image: Image.Image, device: torch.device) -> float:
         score = head(image_features).squeeze().item()
         return float(score)
 
-
 def aesthetic_score(
     image_path: str | Path,
     language: Language,
@@ -278,13 +253,11 @@ def aesthetic_score(
     image = _load_image_rgb(image_path)
     return _compute_aesthetic(image=image, device=device_obj)
 
-
 def _get_musiq(device: torch.device):
     global _MUSIQ_METRIC
     if _MUSIQ_METRIC is None:
         _MUSIQ_METRIC = pyiqa.create_metric(DEFAULT_MUSIQ_METRIC, device=device)
     return _MUSIQ_METRIC
-
 
 def _compute_musiq(image_path: str | Path, device: torch.device) -> float:
     metric = _get_musiq(device)
@@ -293,7 +266,6 @@ def _compute_musiq(image_path: str | Path, device: torch.device) -> float:
     if isinstance(score, torch.Tensor):
         score = score.squeeze().item()
     return float(score)
-
 
 def musiq_score(
     image_path: str | Path,
@@ -304,7 +276,6 @@ def musiq_score(
     _normalize_language(language)
     device_obj = _get_device(device)
     return _compute_musiq(image_path=image_path, device=device_obj)
-
 
 def objective_score(
     image_path: str | Path,
@@ -344,7 +315,6 @@ def objective_score(
         musiq=musiq_score,
     )
     return result.to_dict()
-
 
 if __name__ == "__main__":
     import argparse

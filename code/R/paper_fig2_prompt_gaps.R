@@ -2,7 +2,6 @@
 # Figure 2: prompt-level paired quality differences.
 # Input: data/source/subjective_scores_human120_image_level.xlsx
 # Outputs: data/paper_results/ and outputs/paper_figures/.
-# Dependencies: readxl, ggplot2.
 
 options(stringsAsFactors = FALSE)
 
@@ -138,7 +137,6 @@ if (any(abs(group_stats$MeanGap - c(0.40733333, 0.03234921, 0.05371429)) > 0.003
   stop('Context means differ from verified newer Chinese snapshot')
 }
 
-# Formal result CSV, regenerated solely from the current Chinese image-level Excel.
 csv_path <- file.path(data_dir, 'Fig2_prompt_level_quality_gaps.csv')
 write.csv(figdata, csv_path, row.names = FALSE, fileEncoding = 'UTF-8')
 
@@ -149,9 +147,6 @@ pal <- c('Educational' = '#BB6049',
          'General' = '#5C788D',
          'Chinese-cultural' = '#32847B')
 
-# Draw the only two vertical references separately within EACH DATA SECTION,
-# thereby avoiding interruptions of context headings.
-# Wide manuscript-page geometry: preserve physical font sizes at insertion.
 G <- ggplot2::ggplot() +
   ggplot2::geom_segment(
     data = group_stats,
@@ -229,7 +224,6 @@ G <- ggplot2::ggplot() +
     plot.margin = ggplot2::margin(7, 8, 9, 8)
   )
 
-# Context headings, group means, and direction labels -- outside data rows.
 for (i in seq_len(nrow(group_stats))) {
   a <- group_stats[i, , drop = FALSE]
   ctx <- a$Context[[1L]]
@@ -248,7 +242,6 @@ G <- G +
   ggplot2::annotate('text', x = 0.85, y = 27.2, label = 'Qwen higher',
                     hjust = 1, colour = '#8795A2', size = 3.0)
 
-# Show one large positive, one near-zero, and one negative example.
 for (pid in c('B9', 'B5', 'B2')) {
   a <- figdata[figdata$PromptID == pid, , drop = FALSE]
   if (nrow(a) != 1L) stop('Missing anchor prompt ', pid)

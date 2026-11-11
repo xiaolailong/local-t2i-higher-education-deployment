@@ -2,7 +2,6 @@
 # Figure 3: model quality distributions and adherence coverage by task.
 # Input: data/source/subjective_scores_human120_image_level.xlsx
 # Outputs: data/paper_results/ and outputs/paper_figures/.
-# Dependencies: readxl, ggplot2.
 
 options(stringsAsFactors = FALSE)
 
@@ -38,7 +37,6 @@ result_dir <- file.path(config$repo, 'data', 'paper_results')
 dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(result_dir, recursive = TRUE, showWarnings = FALSE)
 
-# Fixed, confirmed prompt taxonomy from the original research design.
 design <- data.frame(
   PromptID = paste0('B', 1:20),
   Context = c('General','General','Chinese-cultural','Chinese-cultural','General',
@@ -56,7 +54,6 @@ if (sum(design$Context == 'Educational') != 5L ||
   stop('Prompt design unexpectedly changed.')
 }
 
-# NOT a generic 'Model' column. Keep this loader consistent with Figure 2.
 raw <- as.data.frame(readxl::read_excel(config$input, sheet = 'image_level'))
 needed <- c('PromptID','ImageName','Language','ModelShortName',
             'CompositeScore','MeanAdherence','ValidRaterCount')
@@ -85,7 +82,6 @@ if (anyNA(d$PromptID) || anyNA(d$ImageName)) stop('Missing prompt or image key.'
 model_order <- c('qwen','zimage','sdxl')
 model_names <- c(qwen = 'Qwen', zimage = 'Z-Image', sdxl = 'SDXL')
 model_colors <- c(qwen = '#335E7B', zimage = '#C46C50', sdxl = '#39817D')
-# Two complementary classifications; content rows reuse prompts also shown in context rows.
 tasks <- list(
   list(id = 'educational', name = 'EDUCATIONAL', dimension = 'Context',
        prompt_ids = design$PromptID[design$Context == 'Educational'],
@@ -120,7 +116,6 @@ for (j in seq_along(tasks)) {
     a <- a[order(as.integer(sub('^B', '', a$PromptID))), , drop = FALSE]
     if (nrow(a) != length(task$prompt_ids)) stop('Missing score for ', task$id, '/', model)
     yy <- task$rows[[i]]
-    # Deterministic, nonrandom vertical spread keeps all prompt-level observations visible.
     prompt_i <- as.integer(sub('^B','',a$PromptID))
     a$Y <- yy
     a$Y_point <- yy - 0.15 + (((prompt_i * 13L + i * 3L) %% 7L) - 3L) * 0.047
@@ -141,8 +136,6 @@ for (j in seq_along(tasks)) {
       MeanAdherence = mean(a$MeanAdherence),
       N_AboveThreshold = sum(a$AtThreshold), Threshold = config$threshold,
       Y = yy, stringsAsFactors = FALSE)
-    # Dot matrix orders passed instances before non-passed instances; no artificial
-    # ordering or identity correspondence is implied within the coverage panel.
     coverage_list[[length(coverage_list) + 1L]] <- data.frame(
       TaskID = task$id, ModelShortName = model, Slot = seq_len(nrow(a)),
       Passed = c(rep(TRUE, sum(a$AtThreshold)),rep(FALSE, sum(!a$AtThreshold))),
@@ -155,7 +148,6 @@ coverage <- do.call(rbind, coverage_list)
 headers <- do.call(rbind, header_list)
 rownames(point_data) <- rownames(summary_data) <- rownames(coverage) <- NULL
 
-# Preserve the primary paper's exploratory task-gap contrasts as supplementary data.
 pair_q <- d[d$ModelShortName == 'qwen',c('PromptID','CompositeScore'),drop=FALSE]
 pair_z <- d[d$ModelShortName == 'zimage',c('PromptID','CompositeScore'),drop=FALSE]
 pairs <- merge(pair_q,pair_z,by='PromptID',suffixes=c('_Qwen','_ZImage'),sort=FALSE)
@@ -195,18 +187,11 @@ write.csv(summary_data, file.path(result_dir,'Fig3_task_model_summary.csv'),
 write.csv(contrasts, file.path(result_dir,'Fig3_exploratory_task_contrasts.csv'),
           row.names=FALSE,fileEncoding='UTF-8')
 
-# ========================================================================
-# Figure appearance: ONE unified plotting surface (not stitched ggplots).
-# Two family-level background blocks run continuously through both measure
-# columns. Task row positions are shared within the single coordinate system.
-# ========================================================================
 ink        <- '#243B50'
 muted      <- '#65798C'
 pale_edge  <- '#DDE6ED'
 model_ink  <- unname(model_colors)
 
-# Unified x coordinates (0..100) are used only for the drawing layout.
-# The manuscript source CSVs above preserve the REAL 1..5 scores.
 score_x <- function(score) 22.2 + (score - 1) * (34.6 / 4)
 coverage_x <- function(slot) 68.3 + (slot - 1) * 1.64
 
@@ -222,10 +207,6 @@ coverage$DotOutline <- ifelse(coverage$Passed,
                                unname(model_colors[coverage$ModelShortName]),
                                '#B7C6D2')
 
-# TWO subtle background blocks, one per classification family.
-# The five task subgroups are distinguished by deliberate whitespace rather
-# than five independent rectangles; both measure columns share these blocks.
-# Task context and content classification reuse the same 20 prompts.
 family_blocks <- data.frame(
   Family = c('Task context', 'Content classification'),
   xmin = c(0.8, 0.8), xmax = c(99.2, 99.2),
@@ -233,8 +214,6 @@ family_blocks <- data.frame(
   Fill = c('#F2F6F9', '#F1F7F4'),
   stringsAsFactors = FALSE
 )
-# Small, unobtrusive labels embedded INSIDE each background block.
-# No A/B panel naming: this is a single unified figure with two measures.
 section_headings <- data.frame(
   x = c(2.0, 2.0), y = c(31.02, 14.06),
   text = c('TASK CONTEXT', 'CONTENT CLASSIFICATION'),
@@ -245,7 +224,6 @@ headers$Display <- sprintf('%s  ·  n=%d', headers$TaskName, headers$N)
 summary_data$Coverage <- sprintf('%d/%d', summary_data$N_AboveThreshold,
                                    summary_data$N_Prompts)
 
-# Fixed 1-to-5 score ticks appear only beneath the left column.
 score_axis <- data.frame(Value = 1:5)
 score_axis$X <- score_x(score_axis$Value)
 
@@ -256,7 +234,6 @@ fig <- ggplot2::ggplot() +
                  fill = Fill),
     inherit.aes = FALSE, colour = '#E1E8ED', linewidth = 0.25
   ) +
-  # Compact, unlettered measure headers: one unified chart, two readings.
   ggplot2::annotate('text', x = 2.0, y = 32.80,
                     label = 'Model quality by task group',
                     hjust = 0, vjust = .5, size = 4.0,
@@ -265,7 +242,6 @@ fig <- ggplot2::ggplot() +
                     label = sprintf('Adherence coverage  (>= %.1f/5)', config$threshold),
                     hjust = 0, vjust = .5, size = 4.0,
                     fontface = 'bold', colour = ink) +
-  # Context / Content group headings are shared across both columns.
   ggplot2::geom_text(
     data = section_headings,
     ggplot2::aes(x = x, y = y, label = text),
@@ -278,14 +254,11 @@ fig <- ggplot2::ggplot() +
     hjust = 0, vjust = .5, fontface = 'bold', size = 3.43,
     colour = ink
   ) +
-  # Left: three model labels within every band (fixed x; no indentation drift).
   ggplot2::geom_text(
     data = summary_data,
     ggplot2::aes(x = 3.0, y = Y, label = ModelLabel, colour = ModelColor),
     hjust = 0, vjust = .5, size = 3.33
   ) +
-  # Left: image-level observations with deterministic vertical spacing;
-  # larger diamonds denote task/model means.
   ggplot2::geom_point(
     data = point_data,
     ggplot2::aes(x = X_score, y = Y_point, colour = ModelColor),
@@ -296,7 +269,6 @@ fig <- ggplot2::ggplot() +
     ggplot2::aes(x = X_mean, y = Y + .14, fill = ModelColor),
     shape = 23, colour = ink, stroke = .52, size = 3.20
   ) +
-  # Right: one circle per scored image. Filled means mean adherence >= cutoff.
   ggplot2::geom_point(
     data = coverage,
     ggplot2::aes(x = X_dot, y = Y, fill = DotFill,
@@ -308,7 +280,6 @@ fig <- ggplot2::ggplot() +
     ggplot2::aes(x = 96.6, y = Y, label = Coverage),
     hjust = 1, vjust = .5, size = 3.40, colour = ink
   ) +
-  # Left score axis: numerical labels, small ticks, NO background gridlines.
   ggplot2::geom_segment(
     data = score_axis,
     ggplot2::aes(x = X, xend = X, y = 2.69, yend = 2.84),
@@ -322,7 +293,6 @@ fig <- ggplot2::ggplot() +
   ggplot2::annotate('text', x = 39.5, y = 1.06,
                     label = 'Composite score (1–5)',
                     size = 3.62, colour = ink) +
-  # Identity color scales ensure a uniform palette shared by both measures.
   ggplot2::scale_colour_identity() +
   ggplot2::scale_fill_identity() +
   ggplot2::scale_x_continuous(limits = c(0,100), expand = c(0,0)) +

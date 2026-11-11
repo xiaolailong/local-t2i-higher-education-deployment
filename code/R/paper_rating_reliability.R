@@ -112,7 +112,6 @@ name_count <- tapply(raw$ImageName, raw$ImageKey, function(v) length(unique(v)))
 if (any(name_count != 1L))
   fail('Canonicalized image filenames are not unique for some PromptID x model keys.')
 
-# Recompute the image-level composites and verify against the local 60-image export.
 qs <- split(raw, raw$Question)
 key1 <- qs[['1']]$ResponseImageKey
 ix2 <- match(key1, qs[['2']]$ResponseImageKey)
