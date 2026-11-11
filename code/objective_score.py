@@ -7,6 +7,46 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+
+# ============================================================
+# Objective evaluation model directory settings
+# Keep all objective-evaluation models and caches under models/
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent
+
+if (BASE_DIR / "models").exists():
+    PROJECT_DIR = BASE_DIR
+else:
+    PROJECT_DIR = BASE_DIR.parent
+
+MODELS_DIR = PROJECT_DIR / "models"
+
+# Hugging Face / Transformers cache:
+# used by ImageReward and VQAScore
+HF_CACHE_DIR = MODELS_DIR / "hf_cache"
+os.environ.setdefault("HF_HOME", str(HF_CACHE_DIR))
+os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(HF_CACHE_DIR / "hub"))
+os.environ.setdefault("TRANSFORMERS_CACHE", str(HF_CACHE_DIR / "transformers"))
+
+# PyTorch / pyiqa cache:
+# used by MUSIQScore
+TORCH_CACHE_DIR = MODELS_DIR / "torch_cache"
+os.environ.setdefault("TORCH_HOME", str(TORCH_CACHE_DIR))
+
+# HPS v2.1 cache
+HPS_ROOT_DIR = MODELS_DIR / "hpsv2"
+os.environ.setdefault("HPS_ROOT", str(HPS_ROOT_DIR))
+
+# Avoid tokenizer parallelism warnings
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+# Optional: create directories automatically
+HF_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+TORCH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+HPS_ROOT_DIR.mkdir(parents=True, exist_ok=True)
+(MODELS_DIR / "cnclip").mkdir(parents=True, exist_ok=True)
+
 from typing import Dict, Literal, Optional
 from urllib.request import urlretrieve
 

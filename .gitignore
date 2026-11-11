@@ -6,10 +6,15 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# IDE
+.idea/
+
 # local configuration
 code/config.py
 
-# local outputs and large data
+# local outputs and large / generated data
+data/**
+!data/README.md
 data/*.zip
 data/*.xlsx
 data/calibration_analysis/
@@ -25,3 +30,4 @@ figures_temp/
 *.gguf
 *.pt
 *.pth
+models/
